@@ -1,0 +1,4 @@
+cd ~/.ssh
+ssh-keygen -o -t rsa -C "chiucs@chipright.com.tw"
+cat id_rsa.pub
+((copy content to github to profile SSH and GPG key))
