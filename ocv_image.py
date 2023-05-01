@@ -51,16 +51,25 @@ def vision_check(vision_img):
                 pos_all[calc_total] = [center_x, center_y]
                 calc_total += 1
                 cv.circle(vision_img, (center_x, center_y), min_dist, (255, 0, 0), 5) #blue
-    print(f"Total {calc_total} found.")
     cvimshow("Vision_img", vision_img)
+    return calc_total
 
 if __name__ == '__main__':
     isUseCanny = False
     isBar121 = True
-    isCamera = False
+    isCamera = True
+    isWifi = True
     if isCamera:
-        pass
-    elif isBar121:
+        if isWifi:
+            cap = cv.VideoCapture("rtsp://CR-TPMS64:chipright_16552978@192.168.1.103:554/stream1")
+            pass
+        else:
+            cap = cv.VideoCapture(0)
+        if not cap.isOpened():
+            print("Cannot open camera.")
+            exit(1)
+        cnt_loop = 0
+    if isBar121:
         h_val = 25
         v_val = 200
         min_area = 100
@@ -74,7 +83,10 @@ if __name__ == '__main__':
     #read from file
     while True:
         if isCamera:
-            pass
+            ret, read_frame = cap.read()
+            if not ret:
+                print("Can't receive frame.")
+                break
         elif isBar121:
             read_frame = cv.imread('jam.jpg')
         else:
@@ -83,19 +95,34 @@ if __name__ == '__main__':
 
         start_time = time.time()
         if isCamera:
-            pass
+            vision_src = read_frame[:]
         elif isBar121:
             vision_src = read_frame[1500:3400,:]
         else:
             vision_src = read_frame[:]
-        vision_check(vision_src)
+        total_found = vision_check(vision_src)
         period_time = time.time() - start_time
-        print(f"h_val = {h_val} , v_val = {v_val}, min_area = {min_area}, min_dist = {min_dist}, period = {period_time:.3f}")
-
-        key_pressed = cv.waitKey(0)
+        if isCamera:
+            if cnt_loop == 0:
+                total_time = period_time
+                cnt_loop = 1
+            elif cnt_loop < 100:
+                cnt_loop += 1
+                total_time += period_time
+            else:
+                cnt_loop = 0
+                print(f"h_val = {h_val} , v_val = {v_val}, min_area = {min_area}, min_dist = {min_dist}")
+                print(f"Total {total_found} found, total period = {total_time:.3f}.")
+                #print(read_frame.shape)
+            key_pressed = cv.waitKey(1)
+        else:
+            print(f"h_val = {h_val} , v_val = {v_val}, min_area = {min_area}, min_dist = {min_dist}")
+            print(f"Total {total_found} found, period = {period_time:.3f}.")
+            key_pressed = cv.waitKey(0)
+        #print(f"key pressed = {key_pressed}")
         if key_pressed == ord('q'):
             break
-        elif key_pressed == ord('H'):
+        elif (key_pressed == ord('H')) | (key_pressed == ord('n')):
             h_val = min(h_val + 5, 255)
         elif key_pressed == ord('h'):
             h_val = max(0, h_val - 5)
